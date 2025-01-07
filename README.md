@@ -10,18 +10,18 @@ This project provides a command-line interface (CLI) tool for generating spatial
 
 ## Installation
 
-    ```sh
-    # Clone the repository
-    git clone https://github.com/yourusername/uEMEP_tiles_generator.git
+```bash
+# Clone the repository
+git clone https://github.com/eamousing/uEMEP_tiles_generator.git
 
-    # Navigate to the project directory
-    cd uEMEP_tiles_generator
+# Navigate to the project directory
+cd uEMEP_tiles_generator
 
-    # Install the required dependencies
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    ```
+# Install the required dependencies
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ## Usage
 
@@ -29,7 +29,7 @@ This project provides a command-line interface (CLI) tool for generating spatial
 
 To generate tiles, create a JSON configuration file with the required parameters. You can use the `--generate-config` option to generate an empty configuration file with annotations:
 
-```sh
+```bash
 python src/tiles_generator.py --generate-config
 ```
 
@@ -39,7 +39,7 @@ This will create a `config.json` file in the current directory. Edit this file t
 
 Once you have edited the configuration file, run the tile generator with the `--config` option:
 
-```sh
+```bash
 python src/tiles_generator.py --config config.json
 ```
 
