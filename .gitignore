@@ -1,0 +1,12 @@
+# generated
+__pycache__/
+
+# environments
+.venv/
+
+# tile directories
+tiles/
+tile/
+
+# config files
+config*
