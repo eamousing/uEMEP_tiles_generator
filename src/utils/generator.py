@@ -22,7 +22,8 @@ def generate_empty_config():
         "output_dir": "./",
         "tile_name": "",
         "projection": "",
-        "projection_attributes": [0, 0, 0, 0, 0]
+        "projection_attributes": [0, 0, 0, 0, 0],
+        "extract_as_one_tile": False
     }
 
     annotations = {
@@ -34,8 +35,9 @@ def generate_empty_config():
         "tile_delta": "Subgrid size in meters",
         "output_dir": "Output directory for tiles",
         "tile_name": "Tile name prefix",
-        "projection": "Projection name (e.g., LAEA, RD)",
-        "projection_attributes": "[lon_0, lat_0, false_easting, false_northing, earth_radius]"
+        "projection": "Projection name (e.g., LAEA)",
+        "projection_attributes": "[lon_0, lat_0, false_easting, false_northing, earth_radius]",
+        "extract_as_one_tile": "Set true to generate one big tile"
     }
 
     with open("config.json", "w") as config_file:
@@ -95,6 +97,7 @@ def generate_grid_tiles(config):
     tile_delta = config["tile_delta"]
     projection = config["projection"]
     projection_attributes = config["projection_attributes"]
+    extract_as_one_tile = config["extract_as_one_tile"]
 
     # Define projection based on configuration
     if projection == "LAEA":
@@ -106,38 +109,32 @@ def generate_grid_tiles(config):
             y_0=projection_attributes[3], 
             a=projection_attributes[4],
             units='m')
-    elif projection == "RD":
-        proj = Proj(
-            proj='sterea',
-            lon_0=projection_attributes[0],
-            lat_0=projection_attributes[1],
-            x_0=projection_attributes[2],
-            y_0=projection_attributes[3],
-            ellps=projection_attributes[4],
-            units='m')
     else:
         raise ValueError(f"Unsupported projection: {projection}")
 
     # Convert input coordinates from lat/lon to the projection
-    x_min_proj, y_min_proj = proj(x_min, y_min)
-    x_max_proj, y_max_proj = proj(x_max, y_max)
-
-    # Number of tiles in each dimension
-    i_dim = int((x_max_proj - x_min_proj) // delta)
-    j_dim = int((y_max_proj - y_min_proj) // delta)
+    x_min_proj, y_min_proj = x_min, y_min
+    x_max_proj, y_max_proj = x_max, y_max
 
     tiles = []
     k = 0
+    if extract_as_one_tile:
+        k = 1
+        tiles.append((k, x_min_proj, y_min_proj, x_max_proj, y_max_proj))
+    else:
+        # Number of tiles in each dimension
+        i_dim = int((x_max_proj - x_min_proj) // delta)
+        j_dim = int((y_max_proj - y_min_proj) // delta)
 
-    # Loop to generate non-overlapping tiles
-    for i in range(i_dim):
-        for j in range(j_dim):
-            k += 1
-            xx_min = x_min_proj + i * delta
-            yy_min = y_min_proj + j * delta
-            xx_max = xx_min + delta
-            yy_max = yy_min + delta
-            tiles.append((k, xx_min, yy_min, xx_max, yy_max))
+        # Loop to generate non-overlapping tiles
+        for i in range(i_dim):
+            for j in range(j_dim):
+                k += 1
+                xx_min = x_min_proj + i * delta
+                yy_min = y_min_proj + j * delta
+                xx_max = xx_min + delta
+                yy_max = yy_min + delta
+                tiles.append((k, xx_min, yy_min, xx_max, yy_max))
 
     return tiles
 
@@ -155,6 +152,7 @@ def write_tiles_to_files(tiles, config):
     delta = config["delta"]
     output_dir = config["output_dir"]
     tile_name = config["tile_name"]
+    extract_as_one_tile = config["extract_as_one_tile"]
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_dir):
@@ -166,7 +164,10 @@ def write_tiles_to_files(tiles, config):
         generate_tiles(output_dir, k, tile_name, tile_delta, xx_min, yy_min, xx_max, yy_max)
 
     print(f"Number of tiles = {len(tiles)}")
-    print(f"Size of each tile = {delta / 1000} x {delta / 1000} km")
+    if extract_as_one_tile:
+        print(f"Size of tile = {(xx_max - xx_min) / 1000} x {(yy_max - yy_min) / 1000} km")
+    else:
+        print(f"Size of each tile = {delta / 1000} x {delta / 1000} km")
 
 def plot_tiles(tiles, config):
     """
@@ -183,17 +184,11 @@ def plot_tiles(tiles, config):
     output_dir = config["output_dir"]
     tile_name = config["tile_name"]
     subgrid_delta = config["tile_delta"]
+    delta = config["delta"]
     
     # Define the projection based on config
     if projection == "LAEA":
         map_proj = ccrs.LambertAzimuthalEqualArea(
-            central_longitude=projection_attributes[0],
-            central_latitude=projection_attributes[1],
-            false_easting=projection_attributes[2],
-            false_northing=projection_attributes[3]
-        )
-    elif projection == "RD":
-        map_proj = ccrs.Stereographic(
             central_longitude=projection_attributes[0],
             central_latitude=projection_attributes[1],
             false_easting=projection_attributes[2],
@@ -207,7 +202,9 @@ def plot_tiles(tiles, config):
         figsize=(10, 10),
         subplot_kw={'projection': map_proj}
     )
-    
+
+    ax.gridlines(draw_labels=True, linestyle='--')
+
     # Add map features
     ax.add_feature(cfeature.LAND, zorder=0, edgecolor='black')
     ax.add_feature(cfeature.COASTLINE, zorder=0)
@@ -236,7 +233,7 @@ def plot_tiles(tiles, config):
         ax.text(center_x, center_y, str(k), fontsize=10, ha='center', va='center', color='blue')
     
     # Set axis limits to zoom in on the area of interest
-    buffer = 0.05
+    buffer = delta
     x_min = min(tile[1] for tile in tiles) - buffer
     x_max = max(tile[3] for tile in tiles) + buffer
     y_min = min(tile[2] for tile in tiles) - buffer
