@@ -23,7 +23,8 @@ def generate_empty_config():
         "tile_name": "",
         "projection": "",
         "projection_attributes": [0, 0, 0, 0, 0],
-        "extract_as_one_tile": False
+        "extract_as_one_tile": False,
+        "country": ""
     }
 
     annotations = {
@@ -37,7 +38,8 @@ def generate_empty_config():
         "tile_name": "Tile name prefix",
         "projection": "Projection name (e.g., LAEA)",
         "projection_attributes": "[lon_0, lat_0, false_easting, false_northing, earth_radius]",
-        "extract_as_one_tile": "Set true to generate one big tile"
+        "extract_as_one_tile": "Set true to generate one big tile",
+        "country": "Set to autmatically generate tiles for a specific country"
     }
 
     with open("config.json", "w") as config_file:

@@ -52,6 +52,20 @@ def main():
         with open(args.config, 'r') as config_file:
             config = json.load(config_file)["config"]
 
+        # Overwrite coordinates if country is specified
+        if "country" in config and config["country"]:
+            with open('data/europe_bounding_boxes.json', 'r') as bbox_file:
+                bounding_boxes = json.load(bbox_file)
+                country = config["country"]
+                if country in bounding_boxes:
+                    bbox = bounding_boxes[country]
+                    config["x_min"] = bbox["x_min"]
+                    config["x_max"] = bbox["x_max"]
+                    config["y_min"] = bbox["y_min"]
+                    config["y_max"] = bbox["y_max"]
+                else:
+                    raise ValueError(f"Country '{country}' not found in europe_bounding_boxes.json")
+
         # Generate grid tiles based on the configuration
         tiles = generate_grid_tiles(config)
 
